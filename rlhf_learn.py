@@ -132,7 +132,7 @@ def main():
         ]
 
         # Run PPO optimization step
-        ppo_trainer.step(batch_prompts, generated_responses, rewards)
+        ppo_trainer.step(encoded_prompts, generated_responses, rewards)
         print(f"Step {step}/{ppo_config.steps} complete.")
 
     # Save the fine-tuned model
