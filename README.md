@@ -1,3 +1,3 @@
-# How to Run
+## How to Run
 
 python trl_learn.py
