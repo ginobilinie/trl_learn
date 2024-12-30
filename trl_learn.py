@@ -114,4 +114,3 @@ for query_txt, chosen_txt, rejected_txt in zip(prompts, chosen_responses, reject
 
     print(f"train_stats: {train_stats}")
 
-
