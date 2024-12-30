@@ -55,7 +55,8 @@ tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_sid
 tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLMWithValueHead.from_pretrained(model_name).to(device)  # Move model to GPU
-model_ref = deepcopy(model).eval()
+model_ref = deepcopy(model).eval() # used as baseline policy
+# the reward is predicted through the model with value head
 
 # 2. initialize trainer
 ppo_config = {"mini_batch_size": 4, "batch_size": 16, "gradient_accumulation_steps": 4, "steps": 1000, "learning_rate": 1e-5}
@@ -109,29 +110,38 @@ for step in range(tot_steps):
         "pad_token_id": tokenizer.eos_token_id,
         "max_new_tokens": 20,
     }
-    import pdb; pdb.set_trace()
-    for item in query_tensor:
-        import pdb; pdb.set_trace()
-        print(f"item: {item}")
-    response_tensor = ppo_trainer.generate(
-        [item for item in query_tensor], return_prompt=False, **generation_kwargs
+    
+    query_tensor_list = [item for item in query_tensor['input_ids']]
+    response_tensor_list = ppo_trainer.generate(
+        query_tensor_list, return_prompt=False, **generation_kwargs
     )
-    response_txt = tokenizer.decode(response_tensor[0])
+    # response_txt = tokenizer.decode(response_tensor)
+    response_txt_list = tokenizer.batch_decode(response_tensor_list, skip_special_tokens=True)
+    # import pdb; pdb.set_trace()
 
     # 5. define a reward for response
     # (this could be any reward such as human feedback or output from another model)
     # import pdb; pdb.set_trace()
     rewards = [
         reward_function(p, g, c, r).item()
-        for p, g, c, r in zip(batch_prompt_txt, response_txt, batch_chosen_txt, batch_rejected_txt)
+        for p, g, c, r in zip(batch_prompt_txt, response_txt_list, batch_chosen_txt, batch_rejected_txt)
     ]
     rewards_tensors = [torch.tensor(reward).to(device) for reward in rewards]
     # reward = [torch.tensor(1.0, device=model.pretrained_model.device)]
 
     # 6. train model with ppo
     # import pdb; pdb.set_trace()
-    train_stats = ppo_trainer.step([query_tensor[0]], [response_tensor[0]], rewards_tensors)
+    train_stats = ppo_trainer.step(query_tensor_list, response_tensor_list, rewards_tensors)
+    # the reward/value loss (predicted reward by the value head and the input grounth rewards)
+    # the policy loss: advantage*ratio of current policy/ref policy, with clip trick
+    # the kl-divergence: gurantee the model not deviate from the ref policy model much
 
     print(f"step: {step}, train_stats: {train_stats}")
 
 
+# Save the fine-tuned RLHF model
+save_path = "./rlhf_fine_tuned_model"
+model.save_pretrained(save_path)
+
+# Save the tokenizer to ensure compatibility
+tokenizer.save_pretrained(save_path)
