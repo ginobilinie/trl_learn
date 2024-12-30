@@ -1,3 +1,7 @@
+## How to Prepare Env
+pip install -r requirements.txt
+
+
 ## How to Run
 
-python trl_learn.py
+python trl_learn_batch.py
