@@ -3,7 +3,8 @@ import torch
 
 
 # model loading
-model_path = "./rlhf_fine_tuned_model"
+model_path = "./rlhf_fine_tuned_model_Qwen/Qwen2.5-1.5B/"
+# model_path = 'Qwen/Qwen2.5-1.5B'
 
 model = AutoModelForCausalLM.from_pretrained(model_path)
 tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -28,4 +29,4 @@ outputs = model.generate(
 
 # import pdb; pdb.set_trace()
 response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-print(f"Model response:\n {response}")
+print(f"User query: {prompt} \n\n Model response: {response}")
