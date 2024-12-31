@@ -10,32 +10,6 @@ from rlhf_learn_gpu import extract_anthropic_prompt
 from sentence_transformers import SentenceTransformer
 
 
-# # 1. load a pretrained model
-# # model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-# model_name = "gpt2"
-# current_device = Accelerator().local_process_index
-# model = AutoModelForCausalLM.from_pretrained(
-#     model_name,
-#     device_map="auto",
-#     torch_dtype=torch.float16,
-#     trust_remote_code=True,
-#     attn_implementation="flash_attention_2",
-# )
-# lora_config = LoraConfig(
-#     task_type=TaskType.CAUSAL_LM,
-#     inference_mode=False,
-#     r=8,
-#     target_modules=["q_proj", "v_proj"],
-#     lora_alpha=16,
-#     lora_dropout=0,
-# )
-# model = get_peft_model(model, lora_config)
-# model = AutoModelForCausalLMWithValueHead.from_pretrained(model)
-# model_ref = deepcopy(model).eval()
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# tokenizer.pad_token = tokenizer.eos_token
-
-
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Step 1: Load the Dataset
@@ -49,17 +23,17 @@ for entry in dataset:
     rejected_responses.append(rejected_response)
     
 # 1. load a pretrained model
-model_name = "gpt2"
+model_name = "Qwen/Qwen2.5-1.5B" #"gpt2"  or "Qwen/Qwen2.5-1.5B"
 # current_device = Accelerator().local_process_index
-tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left')
+tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', torch_dtype='auto', device_map='auto')
 tokenizer.pad_token = tokenizer.eos_token
 
-model = AutoModelForCausalLMWithValueHead.from_pretrained(model_name).to(device)  # Move model to GPU
+model = AutoModelForCausalLMWithValueHead.from_pretrained(model_name, torch_dtype='auto', device_map='auto').to(device)  # Move model to GPU
 model_ref = deepcopy(model).eval() # used as baseline policy
 # the reward is predicted through the model with value head
 
 # 2. initialize trainer
-ppo_config = {"mini_batch_size": 4, "batch_size": 16, "gradient_accumulation_steps": 4, "steps": 1000, "learning_rate": 1e-5}
+ppo_config = {"mini_batch_size": 1, "batch_size": 8, "gradient_accumulation_steps": 8, "steps": 1000, "learning_rate": 1e-5}
 config = PPOConfig(**ppo_config)
 ppo_trainer = PPOTrainer(config, model, model_ref, tokenizer)
 
@@ -135,12 +109,13 @@ for step in range(tot_steps):
     # the reward/value loss (predicted reward by the value head and the input grounth rewards)
     # the policy loss: advantage*ratio of current policy/ref policy, with clip trick
     # the kl-divergence: gurantee the model not deviate from the ref policy model much
+    # batch division into chunks of mini-batch-size, inference and backward in mini-batch level, gradient accumulation and add the gradients
 
     print(f"step: {step}, train_stats: {train_stats}")
 
 
 # Save the fine-tuned RLHF model
-save_path = "./rlhf_fine_tuned_model"
+save_path = f"./rlhf_fine_tuned_model_{model_name}"
 model.save_pretrained(save_path)
 
 # Save the tokenizer to ensure compatibility
