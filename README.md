@@ -2,16 +2,17 @@
 This repo is for learning basic coding about LLM, in particular, how to do SFT and alignment (RLHF and DPO). Also introduce some datasets in the code.
 
 ## How to Prepare Env
-pip install -r requirements.txt
+(optional)You can prepare anaconda and create an env if you prefer virtual env.
+
+'''pip install -r requirements.txt'''
 
 
 ## How to SFT 
-python sft_chatbot.py
+'''python sft_chatbot.py'''
 
 ## How to align via RLHF
-
-python trl_learn_batch.py
+'''python trl_learn_batch.py'''
 
 
 ## How to inference
-python eval_conv.py 
+'''python eval_conv.py'''
