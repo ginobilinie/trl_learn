@@ -1,8 +1,10 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from collections import deque
+
 
 # Load the Qwen model and tokenizer
-model_name = "qwen_sft_oasst1/checkpoint-6348" #"Qwen/Qwen2.5-1.5B"
+model_name = "rlhf_fine_tuned_model_qwen_sft_oasst1/checkpoint-6348" #"qwen_sft_oasst1/checkpoint-6348" #"Qwen/Qwen2.5-1.5B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
 
@@ -41,22 +43,58 @@ def generate_response(prompt, model, tokenizer, max_new_tokens=100, temperature=
     
     return response
 
-if __name__ == "__main__":
+def all_history_conversation():
     print("Qwen Conversation Test")
     print("Type 'exit' to quit.\n")
     
-    context = ""  # Keeps track of the conversation history
+    inference_context = ""  # Keeps track of the conversation history
     while True:
         user_input = input("You: ")
         if user_input.lower() == "exit":
             break
         
         # Append user input to the context
-        context += f"User: {user_input}\nQwen:"
+        inference_context += f"User: {user_input}\nQwen:"
         
         # Generate the model's response
-        response = generate_response(context, model, tokenizer)
-        print(response)
+        current_response = generate_response(inference_context, model, tokenizer, max_new_tokens=256)
+        print(f"Qwen: {current_response}")
         
         # Update the context with the model's response
-        context += response + "\n"
+        inference_context += current_response + "\n"
+
+def fixed_turn_conversation_history():
+    print("Qwen Conversation Test")
+    print("Type 'exit' to quit.\n")
+    
+    # Initialize a deque with a fixed size of 3 turns
+    message_queue = deque(maxlen=3)
+    
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == "exit":
+            break
+        
+        # Add the user's input to the message queue
+        message_queue.append(f"User: {user_input}")
+        
+        # Construct the context from the message queue
+        context = "\n".join(message_queue) + "\nQwen:"
+        
+        # Generate the model's response
+        response = generate_response(context, model, tokenizer, max_new_tokens=256)
+        
+        # Extract only the model's response for the current turn
+        current_response = response[len(context):].strip()
+        print(f"Qwen: {current_response}")
+        
+        # Add the model's response to the message queue
+        message_queue.append(f"Qwen: {current_response}")
+
+
+if __name__ == "__main__":
+    is_all_history_on = False
+    if is_all_history_on:
+        all_history_conversation()
+    else:
+        fixed_turn_conversation_history()
