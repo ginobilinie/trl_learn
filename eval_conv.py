@@ -2,7 +2,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 # Load the Qwen model and tokenizer
-model_name = "Qwen/Qwen2.5-1.5B"
+model_name = "qwen_sft_oasst1/checkpoint-6348" #"Qwen/Qwen2.5-1.5B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
 

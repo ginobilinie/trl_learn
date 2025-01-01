@@ -23,7 +23,7 @@ for entry in dataset:
     rejected_responses.append(rejected_response)
     
 # 1. load a pretrained model
-model_name = "Qwen/Qwen2.5-1.5B" #"gpt2"  or "Qwen/Qwen2.5-1.5B"
+model_name = "qwen_sft_oasst1/checkpoint-6348" #"Qwen/Qwen2.5-1.5B" #"gpt2"  or "Qwen/Qwen2.5-1.5B"
 # current_device = Accelerator().local_process_index
 tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', torch_dtype='auto', device_map='auto')
 tokenizer.pad_token = tokenizer.eos_token
