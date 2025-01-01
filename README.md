@@ -8,6 +8,8 @@ This repo is for learning basic coding about LLM, in particular, how to do SFT a
  - create virtual env: conda create -n trl python=3.11
  - source ~/.bashr
  - conda activate trl
+
+Install the dependencies:
 ```
 pip install -r requirements.txt
 ```
