@@ -32,10 +32,12 @@ def generate_response(prompt, model, tokenizer, max_new_tokens=100, temperature=
     # Generate a response
     outputs = model.generate(
         inputs["input_ids"],
+        attention_mask=inputs["attention_mask"],  # Add the attention mask here
         max_new_tokens=max_new_tokens,
+        do_sample=True,
         temperature=temperature,
         top_p=top_p,
-        pad_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.pad_token_id,
     )
     
     # Decode the generated tokens
@@ -57,17 +59,19 @@ def all_history_conversation():
         inference_context += f"User: {user_input}\nQwen:"
         
         # Generate the model's response
-        current_response = generate_response(inference_context, model, tokenizer, max_new_tokens=256)
+        current_response = generate_response(inference_context, model, tokenizer, max_new_tokens=256, temperature=0.9, top_p=0.9)
         print(f"Qwen: {current_response}")
         
         # Update the context with the model's response
         inference_context += current_response + "\n"
 
-def fixed_turn_conversation_history():
+
+def fixed_turn_conversation_order():
+    from collections import deque
     print("Qwen Conversation Test")
     print("Type 'exit' to quit.\n")
     
-    # Initialize a deque with a fixed size of 3 turns
+    # Initialize a deque with a fixed size of 3 pairs (turns)
     message_queue = deque(maxlen=3)
     
     while True:
@@ -75,21 +79,29 @@ def fixed_turn_conversation_history():
         if user_input.lower() == "exit":
             break
         
-        # Add the user's input to the message queue
-        message_queue.append(f"User: {user_input}")
+        # Add the new user input to the message queue
+        message_queue.append((f"User: {user_input}", None))  # Placeholder for response
         
-        # Construct the context from the message queue
-        context = "\n".join(message_queue) + "\nQwen:"
+        # Construct the context: Flatten the history while maintaining the order
+        context = ""
+        for user_turn, qwen_response in message_queue:
+            context += user_turn + "\n"
+            if qwen_response is not None:
+                context += qwen_response + "\n"
         
-        # Generate the model's response
+        # Add the current user input to the context
+        context += "Qwen:"
+        
+        # Generate the model's response based on the context
         response = generate_response(context, model, tokenizer, max_new_tokens=256)
         
         # Extract only the model's response for the current turn
         current_response = response[len(context):].strip()
         print(f"Qwen: {current_response}")
         
-        # Add the model's response to the message queue
-        message_queue.append(f"Qwen: {current_response}")
+        # Update the last entry in the message queue with the Qwen response
+        message_queue[-1] = (message_queue[-1][0], f"Qwen: {current_response}")
+
 
 
 if __name__ == "__main__":
@@ -97,4 +109,4 @@ if __name__ == "__main__":
     if is_all_history_on:
         all_history_conversation()
     else:
-        fixed_turn_conversation_history()
+        fixed_turn_conversation_order()
